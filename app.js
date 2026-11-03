@@ -68,6 +68,29 @@ function picURL(p, small = false) {
   return (PICS[key] = cv.toDataURL());
 }
 
+function layoutURL(p) {
+  const key = p.id + "L";
+  if (PICS[key]) return PICS[key];
+  const n = p.board.length, k = 6;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = n * k + 1;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#c98f3e";
+  g.fillRect(0, 0, cv.width, cv.height);
+  const fill = { ".": "#e9b566", o: "#ffdcb1", "#": "#2a7189", X: "#2a7189", t: "#d9464a", P: "#35c4c4", g: "#2d86c9", G: "#2d86c9", x: "#55c34c" };
+  p.board.forEach((line, r) => [...line].forEach((ch, c) => {
+    g.fillStyle = fill[ch] || "#e9b566";
+    g.fillRect(c * k + 1, r * k + 1, k - 1, k - 1);
+    if ("#XtPx".includes(ch)) {
+      g.fillStyle = "rgba(255,255,255,0.3)";
+      g.fillRect(c * k + 1, r * k + 1, k - 1, 1);
+      g.fillStyle = "rgba(0,0,0,0.25)";
+      g.fillRect(c * k + 1, r * k + k - 1, k - 1, 1);
+    }
+  }));
+  return (PICS[key] = cv.toDataURL());
+}
+
 const TEMPLE_LOOK = {
   cave: ["#4f6b52", "Back in my cave, little sailor? Mind your head on the way in."],
   flora: ["#3f8f4a", "Claudius! My garden floor is missing petals again."],
@@ -76,7 +99,12 @@ const TEMPLE_LOOK = {
   venus: ["#d0679e", "Claudius returns. Do try to keep it beautiful this time."],
   bacchus: ["#6e3a99", "Claudius! Pull up a goblet, the floor can wait a minute."],
   vulcan: ["#b02a76", "Back at my forge, Claudius? Mind the glue, it never lets go."],
+  workshop: ["#7a5a2a", "My own floor designs! Think you can match my par?"],
 };
+
+function face(id) {
+  return CHARS[id] ? id : "claudius";
+}
 
 function templeTitle(name) {
   const m = name.match(/^(.*\b(?:of|the))\s+(\S+)$/i);
@@ -92,6 +120,7 @@ function medal(p) {
 }
 
 function verdict(p) {
+  if (p.custom) return `${p.difficulty} · Claudius's par is ${p.moves} moves`;
   if (p.record == null) return "Tutorial puzzle, no world record";
   if (p.originalRecord && p.moves <= p.record) return `New world record: ${p.record} moves (previous record ${p.originalRecord})`;
   const d = p.moves - p.record;
@@ -207,7 +236,7 @@ function castCard([id, name, role, bio, quote]) {
 function homePage() {
   setCrumbs([]);
   document.title = "Pixelus Deluxe Solutions";
-  const all = totals(store.data.puzzles.map((p) => p.id));
+  const all = totals(store.data.puzzles.filter((p) => !p.custom).map((p) => p.id));
   const hero = el("section", { class: "hero" },
     el("div", { class: "hero-title" },
       sprite("claudius", 88),
@@ -233,7 +262,7 @@ function homePage() {
       const s = totals(t.puzzles);
       const thumbs = t.puzzles.slice(0, 8).map((id) => el("img", { src: picURL(store.byId[id], true), alt: "", loading: "lazy" }));
       return el("a", { class: "temple-card panel", href: `#/t/${t.id}` },
-        sprite(t.id, 56),
+        sprite(face(t.id), 56),
         el("h2", {}, t.name),
         el("div", { class: "mosaic-strip" }, thumbs),
         el("p", {}, t.blurb),
@@ -283,7 +312,7 @@ function homePage() {
     el("p", { class: "cast-hint" }, "Click a character to say hello."),
     el("div", { class: "cast-grid" }, CAST.map(castCard)),
   );
-  const wrs = store.data.puzzles.filter((p) => p.originalRecord || (p.record != null && p.moves < p.record));
+  const wrs = store.data.puzzles.filter((p) => !p.custom && (p.originalRecord || (p.record != null && p.moves < p.record)));
   const hall = wrs.length ? el("section", { class: "hall" },
     el("h2", {}, "Hall of records"),
     el("p", { class: "cast-hint" }, "Puzzles where the solver went under the game's own world record."),
@@ -310,7 +339,7 @@ function templePage(t) {
   const left = s.count - s.perfect;
   const god = el("div", { class: "temple-god" },
     el("div", { class: "god-bubble" }, quote),
-    sprite(t.id, 150),
+    sprite(face(t.id), 150),
   );
   const grid = el("div", { class: "puzzle-grid" },
     t.puzzles.map((id) => {
@@ -318,13 +347,15 @@ function templePage(t) {
       return el("a", { class: "puzzle-card", href: `#/p/${p.id}`, title: `Puzzle ${p.index}` },
         el("span", { class: "pic" },
           el("img", { src: picURL(p), alt: `${t.name} puzzle ${p.index}`, loading: "lazy" }),
+          el("img", { class: "layout", src: layoutURL(p), alt: "", loading: "lazy" }),
           medal(p),
           p.originalRecord ? el("span", { class: "wr-flag" }, "New WR") : null,
           mine()[p.id] != null ? el("span", { class: "you-flag", title: `You solved it in ${mine()[p.id]} moves` }, "\u2713 " + mine()[p.id]) : null,
         ),
         el("span", { class: "plate" },
-          el("b", {}, `Puzzle ${p.index}`),
-          el("small", {}, p.record != null ? `${p.moves} moves · record ${p.record}` : `${p.moves} moves`),
+          el("b", {}, p.custom ? `${p.index}. ${p.title}` : `Puzzle ${p.index}`),
+          p.custom ? el("span", { class: `diff ${p.difficulty.toLowerCase()}` }, p.difficulty) : null,
+          el("small", {}, p.custom ? `par ${p.moves} moves` : p.record != null ? `${p.moves} moves · record ${p.record}` : `${p.moves} moves`),
         ),
       );
     }),
@@ -357,7 +388,7 @@ function puzzlePage(p) {
         const q = store.byId[id];
         return el("a", { href: `#/p/${q.id}`, class: q.id === p.id ? "active" : "" },
           el("img", { src: picURL(q, true), alt: "" }),
-          el("span", {}, el("b", {}, `Puzzle ${q.index}`), el("small", {}, `${q.moves} moves`)),
+          el("span", {}, el("b", {}, q.custom ? q.title : `Puzzle ${q.index}`), el("small", {}, q.custom ? q.difficulty : `${q.moves} moves`)),
         );
       }),
     ),
@@ -756,7 +787,7 @@ class Player {
 
     this.hud.replaceChildren(
       pnav,
-      el("h2", {}, `${this.t.name} · Puzzle ${p.index}`),
+      el("h2", {}, p.custom ? `${this.t.name} · ${p.title}` : `${this.t.name} · Puzzle ${p.index}`),
       el("p", { class: "note" }, `${verdict(p)}. ${p.optimal ? "Proven optimal." : `Lower bound: ${p.lowerBound} moves.`}`),
       el("div", { class: "counter" },
         el("div", {}, this.ctr.moves, el("small", {}, "MOVES")),
@@ -802,7 +833,8 @@ class Player {
       const n = b.history.length;
       const rec = this.p.record;
       let msg = `Solved in <b>${n}</b> moves`;
-      if (this.mode === "play" && rec != null) msg += n < rec ? " — that beats the world record!" : n === rec ? " — a perfect, record-tying solve!" : ` — the record is ${rec}.`;
+      const what = this.p.custom ? "Claudius's par" : "the world record";
+      if (this.mode === "play" && rec != null) msg += n < rec ? ` — that beats ${what}!` : n === rec ? ` — you matched ${what}!` : ` — ${what} is ${rec}.`;
       this.banner.innerHTML = msg;
       this.banner.hidden = false;
       if (this.mode === "play" && !this.celebrated) {
