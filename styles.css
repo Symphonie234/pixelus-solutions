@@ -1254,3 +1254,21 @@ kbd {
   70% { opacity: 1; }
   100% { transform: translate(var(--tx), calc(var(--ty) + 160px)) scale(1) rotate(var(--rot)); opacity: 0; }
 }
+
+.sound-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--rope);
+  background: rgba(255, 226, 122, 0.12);
+  color: var(--gold-hi);
+  cursor: pointer;
+}
+
+.sound-btn:hover { background: rgba(255, 226, 122, 0.25); }
+.sound-btn[aria-pressed="false"] { color: #b9a47a; }
+.masthead .crumbs { margin-left: auto; }

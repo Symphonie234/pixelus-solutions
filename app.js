@@ -188,6 +188,7 @@ function castCard([id, name, role, bio, quote]) {
     pic.classList.remove("hop");
     void pic.offsetWidth;
     pic.classList.add("hop");
+    sfx("hop");
     bubble.classList.add("show");
     clearTimeout(bubble.timer);
     bubble.timer = setTimeout(() => bubble.classList.remove("show"), 3200);
@@ -544,6 +545,7 @@ class Board {
       this.cells[i].classList.remove("shake");
       void this.cells[i].offsetWidth;
       this.cells[i].classList.add("shake");
+      sfx("bad");
     }
   }
 
@@ -573,7 +575,10 @@ class Board {
     const dist = l.path.length + 1;
     const wait = this.thrower.walk(r - l.dr * dist, c - l.dc * dist, l.dr, l.dc) / this.speed;
     setTimeout(() => {
-      if (op === "p") this.thrower.act("throw");
+      if (op === "p") {
+        this.thrower.act("throw");
+        sfx("throw");
+      } else sfx("remove");
       this.launch(i, l, op, done);
     }, wait + (op === "p" ? 70 / this.speed : 0));
   }
@@ -606,7 +611,12 @@ class Board {
       if (ended) return;
       ended = true;
       f.remove();
-      if (op === "r") this.thrower.act("catch");
+      if (op === "r") {
+        this.thrower.act("catch");
+    sfx("solve");
+    setTimeout(() => sfx("reveal"), 380);
+        sfx("catch");
+      } else sfx(this.glue.has(i) ? "glue" : "place");
       done();
     };
     f.addEventListener("transitionend", end);
