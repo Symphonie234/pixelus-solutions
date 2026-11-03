@@ -279,6 +279,44 @@ function glyph(i) {
   return svg;
 }
 
+class Thrower {
+  constructor(board) {
+    this.board = board;
+    this.el = el("div", { class: "claudius" }, sprite("claudius", 44));
+    board.root.parentElement.append(this.el);
+    this.at = null;
+    requestAnimationFrame(() => this.walk(-1, Math.floor(board.cols / 2), 1, 0, 1, true));
+  }
+
+  spot(r, c) {
+    const b = this.board.root;
+    const size = this.board.cells[0].getBoundingClientRect().width;
+    return [b.offsetLeft + b.clientLeft + (c + 0.5) * size, b.offsetTop + b.clientTop + (r + 0.5) * size];
+  }
+
+  walk(r, c, dr, dc, speed, instant = false) {
+    const [x, y] = this.spot(r, c);
+    const d = this.at ? Math.hypot(x - this.at[0], y - this.at[1]) : 0;
+    this.at = [x, y];
+    const ms = instant || d < 1 ? 0 : Math.min(460, 90 + d * 1.4) / speed;
+    this.el.classList.toggle("walking", ms > 0);
+    this.el.classList.toggle("face-left", dc < 0);
+    this.el.style.setProperty("--dx", `${dc * 9}px`);
+    this.el.style.setProperty("--dy", `${dr * 9}px`);
+    this.el.style.transitionDuration = `${ms}ms`;
+    this.el.style.transform = `translate(${x}px, ${y}px)`;
+    clearTimeout(this.stop);
+    this.stop = setTimeout(() => this.el.classList.remove("walking"), ms);
+    return ms;
+  }
+
+  act(kind) {
+    this.el.classList.remove("throw", "catch");
+    void this.el.offsetWidth;
+    this.el.classList.add(kind);
+  }
+}
+
 class Board {
   constructor(p, root, onMove) {
     this.rows = p.board.length;
@@ -310,6 +348,7 @@ class Board {
     this.locked = false;
     this.speed = 1;
     this.build();
+    this.thrower = new Thrower(this);
   }
 
   build() {
@@ -413,6 +452,16 @@ class Board {
   }
 
   fly(i, l, op, done) {
+    const [r, c] = this.rc(i);
+    const dist = l.path.length + 1;
+    const wait = this.thrower.walk(r - l.dr * dist, c - l.dc * dist, l.dr, l.dc, this.speed);
+    setTimeout(() => {
+      if (op === "p") this.thrower.act("throw");
+      this.launch(i, l, op, done);
+    }, wait + (op === "p" ? 70 / this.speed : 0));
+  }
+
+  launch(i, l, op, done) {
     const size = this.cells[0].getBoundingClientRect().width;
     const [r, c] = this.rc(i);
     const dist = l.path.length + 1;
@@ -435,6 +484,7 @@ class Board {
       if (ended) return;
       ended = true;
       f.remove();
+      if (op === "r") this.thrower.act("catch");
       done();
     };
     f.addEventListener("transitionend", end);

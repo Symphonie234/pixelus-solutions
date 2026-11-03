@@ -354,7 +354,8 @@ h1, h2, h3, .cinzel {
 .side-list small { color: var(--ink-soft); }
 
 .board-wrap {
-  padding: 14px;
+  position: relative;
+  padding: 30px;
   border-radius: 12px;
   background:
     repeating-linear-gradient(90deg, #b9811b 0 6px, #e0aa36 6px 12px),
@@ -773,4 +774,55 @@ h1, h2, h3, .cinzel {
 @media (max-width: 720px) {
   .story { grid-template-columns: 1fr; }
   .hero-title { flex-direction: column; }
+}
+
+.claudius {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  margin: -30px 0 0 -22px;
+  z-index: 8;
+  pointer-events: none;
+  transition-property: transform;
+  transition-timing-function: ease-in-out;
+}
+
+.claudius .sprite { animation: none; }
+.claudius .sprite .f1, .claudius .sprite .f2 { animation: none; }
+.claudius .sprite .f2 { opacity: 0; }
+.claudius.face-left .sprite { transform: scaleX(-1); }
+.claudius.walking .sprite { animation: waddle 0.22s ease-in-out infinite; }
+.claudius.walking .sprite .f1 { animation: frame-a 0.22s steps(1) infinite; }
+.claudius.walking .sprite .f2 { animation: frame-b 0.22s steps(1) infinite; }
+.claudius.throw .sprite { animation: throw 0.28s ease-out; }
+.claudius.throw .sprite .f2 { animation: flash 0.28s steps(1); }
+.claudius.catch .sprite { animation: catch 0.32s ease-out; }
+
+@keyframes waddle {
+  0%, 100% { translate: 0 0; rotate: -4deg; }
+  50% { translate: 0 -3px; rotate: 4deg; }
+}
+
+@keyframes throw {
+  0% { translate: 0 0; }
+  35% { translate: calc(var(--dx) * -0.5) calc(var(--dy) * -0.5); scale: 1.05 0.95; }
+  60% { translate: var(--dx) var(--dy); scale: 0.95 1.06; }
+  100% { translate: 0 0; scale: 1 1; }
+}
+
+@keyframes catch {
+  0% { translate: 0 0; }
+  40% { translate: 0 -10px; scale: 0.95 1.08; }
+  70% { translate: 0 0; scale: 1.08 0.92; }
+  100% { translate: 0 0; scale: 1 1; }
+}
+
+@keyframes flash { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+
+@media (max-width: 720px) {
+  .board-wrap { padding: 24px; }
+  .claudius { width: 34px; height: 34px; margin: -24px 0 0 -17px; }
+  .claudius .sprite { --size: 34px; }
 }
