@@ -285,7 +285,7 @@ class Thrower {
     this.el = el("div", { class: "claudius" }, sprite("claudius", 44));
     board.root.parentElement.append(this.el);
     this.at = null;
-    requestAnimationFrame(() => this.walk(-1, Math.floor(board.cols / 2), 1, 0, 1, true));
+    requestAnimationFrame(() => this.walk(-1, Math.floor(board.cols / 2), 1, 0));
   }
 
   spot(r, c) {
@@ -294,24 +294,20 @@ class Thrower {
     return [b.offsetLeft + b.clientLeft + (c + 0.5) * size, b.offsetTop + b.clientTop + (r + 0.5) * size];
   }
 
-  walk(r, c, dr, dc, speed, instant = false) {
+  walk(r, c, dr, dc) {
     const [x, y] = this.spot(r, c);
-    const d = this.at ? Math.hypot(x - this.at[0], y - this.at[1]) : 0;
+    const moved = !this.at || Math.hypot(x - this.at[0], y - this.at[1]) > 1;
     this.at = [x, y];
-    const ms = instant || d < 1 ? 0 : Math.min(460, 90 + d * 1.4) / speed;
-    this.el.classList.toggle("walking", ms > 0);
     this.el.classList.toggle("face-left", dc < 0);
     this.el.style.setProperty("--dx", `${dc * 9}px`);
     this.el.style.setProperty("--dy", `${dr * 9}px`);
-    this.el.style.transitionDuration = `${ms}ms`;
     this.el.style.transform = `translate(${x}px, ${y}px)`;
-    clearTimeout(this.stop);
-    this.stop = setTimeout(() => this.el.classList.remove("walking"), ms);
-    return ms;
+    if (moved) this.act("pop");
+    return moved ? 110 : 0;
   }
 
   act(kind) {
-    this.el.classList.remove("throw", "catch");
+    this.el.classList.remove("throw", "catch", "pop");
     void this.el.offsetWidth;
     this.el.classList.add(kind);
   }
@@ -454,7 +450,7 @@ class Board {
   fly(i, l, op, done) {
     const [r, c] = this.rc(i);
     const dist = l.path.length + 1;
-    const wait = this.thrower.walk(r - l.dr * dist, c - l.dc * dist, l.dr, l.dc, this.speed);
+    const wait = this.thrower.walk(r - l.dr * dist, c - l.dc * dist, l.dr, l.dc) / this.speed;
     setTimeout(() => {
       if (op === "p") this.thrower.act("throw");
       this.launch(i, l, op, done);
