@@ -94,6 +94,7 @@ function homePage() {
       const s = totals(t.puzzles);
       const thumbs = t.puzzles.slice(0, 8).map((id) => el("img", { src: store.byId[id].thumb, alt: "", loading: "lazy" }));
       return el("a", { class: "temple-card panel", href: `#/t/${t.id}` },
+        sprite(t.id, 56),
         el("h2", {}, t.name),
         el("div", { class: "mosaic-strip" }, thumbs),
         el("p", {}, t.blurb),
@@ -123,6 +124,7 @@ function templePage(t) {
   document.title = `${t.name} · Pixelus Solutions`;
   const s = totals(t.puzzles);
   const head = el("div", { class: "temple-head" },
+    sprite(t.id, 96),
     el("h1", {}, t.name),
     el("p", {}, `${s.count} puzzles · ${s.moves} moves in total · ${s.perfect}/${s.count} perfect`),
   );
@@ -175,12 +177,19 @@ class Board {
     this.solid = new Set();
     this.goal = new Set();
     this.start = new Set();
+    this.glue = new Set();
     p.board.forEach((line, r) =>
       [...line].forEach((ch, c) => {
         const i = r * this.cols + c;
         if (ch === "#" || ch === "X") this.solid.add(i);
         else if (ch === "o") this.goal.add(i);
         else if (ch === "t") this.start.add(i);
+        else if (ch === "P" || ch === "x") {
+          this.goal.add(i);
+          this.start.add(i);
+        }
+        if (ch === "g") this.goal.add(i);
+        if (ch === "g" || ch === "G" || ch === "x") this.glue.add(i);
       }),
     );
     this.tray = this.goal.size;
@@ -238,7 +247,7 @@ class Board {
   }
 
   removeLane(i) {
-    if (!this.mine.has(i)) return null;
+    if (!this.mine.has(i) || this.glue.has(i)) return null;
     let best = null;
     for (const [dr, dc] of DIRS) {
       const l = this.lane(i, dr, dc);
@@ -323,11 +332,11 @@ class Board {
 
   paint() {
     this.cells.forEach((cell, i) => {
-      cell.className = "cell" + (this.goal.has(i) ? " target" : "");
+      cell.className = "cell" + (this.goal.has(i) ? " target" : "") + (this.glue.has(i) ? " glue" : "");
       cell.replaceChildren();
       if (this.solid.has(i)) cell.append(el("div", { class: "tile fixed" }));
       else if (this.mine.has(i)) {
-        const cls = "tile" + (this.goal.has(i) ? "" : " temp") + (i === this.last ? " last" : "");
+        const cls = "tile" + (this.goal.has(i) ? "" : " temp") + (this.glue.has(i) ? " glued" : "") + (i === this.last ? " last" : "");
         cell.append(el("div", { class: cls }));
       }
     });
