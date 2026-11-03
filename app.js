@@ -12,6 +12,7 @@ fetch("data/puzzles.json")
     data.puzzles.forEach((p) => (store.byId[p.id] = p));
     data.temples.forEach((t) => (store.temples[t.id] = t));
     window.addEventListener("hashchange", route);
+    document.addEventListener("keydown", (e) => store.player && store.player.key(e));
     route();
   })
   .catch(() => {
@@ -113,10 +114,31 @@ function route() {
   homePage();
 }
 
+const MINE_KEY = "pxd-mine";
+
+function mine() {
+  try {
+    return JSON.parse(localStorage.getItem(MINE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveMine(id, n) {
+  const m = mine();
+  if (m[id] != null && m[id] <= n) return false;
+  m[id] = n;
+  try {
+    localStorage.setItem(MINE_KEY, JSON.stringify(m));
+  } catch {}
+  return true;
+}
+
 function totals(ids) {
   const ps = ids.map((id) => store.byId[id]);
   return {
     count: ps.length,
+    ranked: ps.filter((p) => p.record != null).length,
     moves: ps.reduce((s, p) => s + p.moves, 0),
     perfect: ps.filter((p) => p.record != null && p.moves <= p.record).length,
     beats: ps.filter((p) => p.originalRecord || (p.record != null && p.moves < p.record)).length,
@@ -210,6 +232,10 @@ function homePage() {
         el("h2", {}, t.name),
         el("div", { class: "mosaic-strip" }, thumbs),
         el("p", {}, t.blurb),
+        el("div", { class: "progress" },
+          el("i", { style: `width:${s.ranked ? (100 * s.perfect / s.ranked).toFixed(1) : 100}%` }),
+          el("span", {}, s.ranked ? `${s.perfect}/${s.ranked} at the record` : `all ${s.count} solved`),
+        ),
         el("div", { class: "temple-meta" },
           el("span", { class: "pill" }, `${s.count} puzzles`),
           el("span", { class: "pill" }, `${s.moves} moves`),
@@ -252,7 +278,22 @@ function homePage() {
     el("p", { class: "cast-hint" }, "Click a character to say hello."),
     el("div", { class: "cast-grid" }, CAST.map(castCard)),
   );
-  app.replaceChildren(hero, story, grid, rules, cast, about);
+  const wrs = store.data.puzzles.filter((p) => p.originalRecord || (p.record != null && p.moves < p.record));
+  const hall = wrs.length ? el("section", { class: "hall" },
+    el("h2", {}, "Hall of records"),
+    el("p", { class: "cast-hint" }, "Puzzles where the solver went under the game's own world record."),
+    el("div", { class: "hall-row" }, wrs.map((p) => {
+      const was = p.originalRecord || p.record;
+      return el("a", { class: "hall-card panel", href: `#/p/${p.id}` },
+        el("img", { src: picURL(p), alt: "" }),
+        el("b", {}, `${store.temples[p.temple].name} · ${p.index}`),
+        el("span", { class: "hall-num" }, el("s", {}, String(was)), " → ", el("strong", {}, String(p.moves))),
+      );
+    })),
+  ) : null;
+  const done = Object.keys(mine()).filter((id) => store.byId[id]).length;
+  if (done) hero.querySelector(".stat-row").append(el("div", { class: "stat mine" }, el("b", {}, String(done)), el("span", {}, "solved by you")));
+  app.replaceChildren(hero, story, grid, hall, rules, cast, about);
 }
 
 function templePage(t) {
@@ -274,6 +315,7 @@ function templePage(t) {
           el("img", { src: picURL(p), alt: `${t.name} puzzle ${p.index}`, loading: "lazy" }),
           medal(p),
           p.originalRecord ? el("span", { class: "wr-flag" }, "New WR") : null,
+          mine()[p.id] != null ? el("span", { class: "you-flag", title: `You solved it in ${mine()[p.id]} moves` }, "\u2713 " + mine()[p.id]) : null,
         ),
         el("span", { class: "plate" },
           el("b", {}, `Puzzle ${p.index}`),
@@ -585,6 +627,28 @@ class Board {
     this.thrower.act("catch");
   }
 
+  peek(i, on) {
+    this.cells[i].classList.toggle("peek", on);
+  }
+
+  confetti() {
+    const box = this.root.getBoundingClientRect();
+    const kinds = ["", " temp", " glued", " fixed"];
+    for (let k = 0; k < 28; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = 120 + Math.random() * 220;
+      const bit = el("div", { class: `tile bit${kinds[k % 4]}` }, glyph(k * 7));
+      bit.style.left = `${box.width / 2 - 12}px`;
+      bit.style.top = `${box.height / 2 - 12}px`;
+      bit.style.setProperty("--tx", `${Math.cos(a) * d}px`);
+      bit.style.setProperty("--ty", `${Math.sin(a) * d - 80}px`);
+      bit.style.setProperty("--rot", `${Math.round(Math.random() * 720 - 360)}deg`);
+      bit.style.animationDelay = `${Math.random() * 120}ms`;
+      this.root.parentElement.append(bit);
+      setTimeout(() => bit.remove(), 1700);
+    }
+  }
+
   hidePicture() {
     if (!this.picture) return;
     this.picture.remove();
@@ -641,14 +705,29 @@ class Player {
     this.prevBtn = el("button", { class: "btn", onclick: () => this.prev(), title: "Previous move" }, "◀ Step");
     this.nextBtn = el("button", { class: "btn", onclick: () => this.next(), title: "Next move" }, "Step ▶");
     this.moveList = el("div", { class: "moves" },
-      this.plan.map(([op, , r, c], k) =>
-        el("span", { class: op === "p" ? "place" : "remove", title: `Move ${k + 1}` }, `${op === "p" ? "+" : "−"}${r + 1},${c + 1}`),
-      ),
+      this.plan.map(([op, i, r, c], k) => {
+        const s = el("span", { class: op === "p" ? "place" : "remove", title: `Move ${k + 1}: jump here` }, `${op === "p" ? "+" : "−"}${r + 1},${c + 1}`);
+        s.addEventListener("click", () => this.jumpTo(k + 1));
+        s.addEventListener("mouseenter", () => this.board.peek(i, true));
+        s.addEventListener("mouseleave", () => this.board.peek(i, false));
+        return s;
+      }),
+    );
+    const ids = this.t.puzzles;
+    const at = ids.indexOf(p.id);
+    this.prevId = ids[at - 1];
+    this.nextId = ids[at + 1];
+    this.mineLine = el("p", { class: "mine-line" });
+    const pnav = el("div", { class: "pnav" },
+      this.prevId ? el("a", { class: "btn small", href: `#/p/${this.prevId}`, title: "Previous puzzle ( [ )" }, "\u25c0 Prev") : el("span"),
+      el("span", { class: "pnav-pos" }, `${at + 1} / ${ids.length}`),
+      this.nextId ? el("a", { class: "btn small", href: `#/p/${this.nextId}`, title: "Next puzzle ( ] )" }, "Next \u25b6") : el("span"),
     );
     const speed = el("input", { type: "range", min: "0.25", max: "3", step: "0.25", value: "1",
       oninput: (e) => (this.board.speed = Number(e.target.value)) });
 
     this.hud.replaceChildren(
+      pnav,
       el("h2", {}, `${this.t.name} · Puzzle ${p.index}`),
       el("p", { class: "note" }, `${verdict(p)}. ${p.optimal ? "Proven optimal." : `Lower bound: ${p.lowerBound} moves.`}`),
       el("div", { class: "counter" },
@@ -657,6 +736,7 @@ class Player {
         el("div", {}, this.ctr.record, el("small", {}, "RECORD")),
       ),
       this.banner,
+      this.mineLine,
       el("div", { class: "btn-row" },
         el("button", { class: "btn", onclick: () => this.userUndo() }, "Undo"),
         el("button", { class: "btn", onclick: () => this.userReset() }, "Reset"),
@@ -666,6 +746,7 @@ class Player {
       el("label", { class: "speed" }, "Speed", speed),
       this.moveList,
       el("p", { class: "note" }, "Click an empty cell to slide a tile in from an edge; it stops against the first tile in its way. Click one of your tiles to pull it back out. Red tiles are helpers sitting on non-target cells."),
+      el("p", { class: "keys" }, el("kbd", {}, "Space"), " play/pause ", el("kbd", {}, "\u2190"), el("kbd", {}, "\u2192"), " step ", el("kbd", {}, "U"), " undo ", el("kbd", {}, "R"), " reset ", el("kbd", {}, "["), el("kbd", {}, "]"), " puzzles"),
       el("div", { class: "legend" },
         el("span", {}, el("i", { style: "background:var(--target)" }), "target"),
         el("span", {}, el("i", { style: "background:var(--fixed)" }), "fixed tile"),
@@ -674,6 +755,7 @@ class Player {
         p.board.some((l) => /[gGx]/.test(l)) ? el("span", {}, el("i", { style: "background:#2d86c9;border-radius:50%" }), "glue: a tile set here can't be removed") : null,
       ),
     );
+    this.showMine();
     this.update();
   }
 
@@ -695,13 +777,50 @@ class Player {
       if (this.mode === "play" && rec != null) msg += n < rec ? " — that beats the world record!" : n === rec ? " — a perfect, record-tying solve!" : ` — the record is ${rec}.`;
       this.banner.innerHTML = msg;
       this.banner.hidden = false;
+      if (this.mode === "play" && !this.celebrated) {
+        this.celebrated = true;
+        const best = saveMine(this.p.id, n);
+        setTimeout(() => b.confetti(), 300);
+        if (best) this.showMine(true);
+      }
     } else {
       this.banner.hidden = true;
+      this.celebrated = false;
       b.hidePicture();
     }
     this.playBtn.textContent = this.playing ? "Pause" : this.step >= this.plan.length && this.mode === "solution" ? "Replay solution" : "Play solution";
     this.prevBtn.disabled = this.mode !== "solution" || this.step === 0;
     this.nextBtn.disabled = this.step >= this.plan.length && this.mode === "solution";
+  }
+
+  showMine(fresh = false) {
+    const n = mine()[this.p.id];
+    this.mineLine.hidden = n == null;
+    if (n != null) this.mineLine.innerHTML = `${fresh ? "New personal best! " : ""}Your best here: <b>${n}</b> moves${this.p.record != null && n <= this.p.record ? " \u2605" : ""}`;
+  }
+
+  jumpTo(k) {
+    this.pause();
+    this.enterSolution();
+    this.step = Math.max(0, Math.min(k, this.plan.length));
+    this.board.reset();
+    for (let j = 0; j < this.step; j++) this.board.apply(this.plan[j][0], this.plan[j][1], false);
+    this.update();
+  }
+
+  key(e) {
+    if (e.target.closest && e.target.closest("input, textarea, select")) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    if (k === " ") this.toggle();
+    else if (k === "ArrowRight") { this.pause(); this.next(); }
+    else if (k === "ArrowLeft") this.prev();
+    else if (k === "r" || k === "R") this.userReset();
+    else if (k === "u" || k === "U") this.userUndo();
+    else if (k === "[" && this.prevId) location.hash = `#/p/${this.prevId}`;
+    else if (k === "]" && this.nextId) location.hash = `#/p/${this.nextId}`;
+    else return;
+    e.preventDefault();
   }
 
   enterSolution() {
