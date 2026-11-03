@@ -438,11 +438,6 @@ class Board {
       return true;
     }
     this.busy = true;
-    if (op === "r") {
-      this.mine.delete(i);
-      this.paint();
-      this.mine.add(i);
-    }
     this.fly(i, l, op, finish);
     return true;
   }
@@ -465,6 +460,11 @@ class Board {
     const at = [r * size, c * size];
     const [from, to] = op === "p" ? [out, at] : [at, out];
     const f = el("div", { class: `flyer${this.goal.has(i) ? "" : " temp"}${this.glue.has(i) && op === "p" ? " glued" : ""}` }, glyph(i));
+    if (op === "r") {
+      this.mine.delete(i);
+      this.paint();
+      this.mine.add(i);
+    }
     f.style.left = "1px";
     f.style.top = "1px";
     f.style.transform = `translate(${from[1]}px, ${from[0]}px)`;

@@ -456,8 +456,8 @@ h1, h2, h3, .cinzel {
 
 .flyer {
   inset: auto;
-  width: calc(var(--cell) - 2px);
-  height: calc(var(--cell) - 2px);
+  width: calc(var(--cell) - 3px);
+  height: calc(var(--cell) - 3px);
   z-index: 5;
   pointer-events: none;
   transition-property: transform;
