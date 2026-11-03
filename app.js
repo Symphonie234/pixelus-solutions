@@ -75,13 +75,76 @@ function totals(ids) {
   };
 }
 
+const CAST = [
+  ["claudius", "Claudius", "The castaway",
+    "A Roman sailor washed up on the island of Pixelus with nothing but a sandal tan. He's the one hurling tiles across every floor in the game.",
+    "Shipwrecked, sunburnt, and somehow now in charge of interior design."],
+  ["cave", "The Cyclops", "Keeper of the cave",
+    "Myth's one-eyed giants were famous builders. This one guards the tutorial cave, where every floor teaches one trick.",
+    "One eye, zero depth perception. Don't ask me to line tiles up."],
+  ["flora", "Flora", "Goddess of flowers",
+    "The Roman goddess of spring and blossoms. Her temple is where the island's real puzzles begin to bloom.",
+    "Every missing tile is just a flower that hasn't opened yet."],
+  ["cupid", "Cupid", "God of love",
+    "The winged son of Venus, armed with a bow and far too many arrows. His floors are hearts, roses and long chains of stoppers.",
+    "I never miss. Tiles, on the other hand..."],
+  ["neptune", "Neptune", "God of the sea",
+    "Ruler of oceans and earthquakes, never seen without his trident. His temple fills the tile tray to the brim.",
+    "Seven helpers deep? That's a puddle where I'm from."],
+  ["venus", "Venus", "Goddess of beauty",
+    "Born from sea foam and carried ashore on a scallop shell. Her temple holds the toughest records of the early game.",
+    "Beauty takes exactly as many moves as the record says. No more."],
+  ["bacchus", "Bacchus", "God of wine and revelry",
+    "Grapes, goblets and feasts. Some of his tiles come already placed, and the shortest route often lifts them out first.",
+    "A tile already in place? Pour it out and start the party over."],
+  ["vulcan", "Vulcan", "God of fire and the forge",
+    "The blacksmith of the gods, hammering away beneath a volcano. His floors are spotted with glue, and a tile set on glue stays forever.",
+    "Measure twice, glue once."],
+];
+
+const FACTS = [
+  ["Developer", "Nuclide Games"],
+  ["Publisher", "PopCap Games"],
+  ["Released", "2005, Windows and Mac"],
+  ["Temples", "9 temples, 201 puzzles"],
+  ["Ancestor", "Guru Logi Champ (GBA, 2001)"],
+];
+
+function castCard([id, name, role, bio, quote]) {
+  const bubble = el("div", { class: "bubble" }, `“${quote}”`);
+  const pic = el("button", { class: "cast-pic", type: "button", "aria-label": `Say hi to ${name}` }, sprite(id, 72));
+  pic.addEventListener("click", () => {
+    pic.classList.remove("hop");
+    void pic.offsetWidth;
+    pic.classList.add("hop");
+    bubble.classList.add("show");
+    clearTimeout(bubble.timer);
+    bubble.timer = setTimeout(() => bubble.classList.remove("show"), 3200);
+  });
+  const temple = store.temples[id];
+  return el("article", { class: "cast-card panel" },
+    bubble,
+    pic,
+    el("h3", {}, name),
+    el("span", { class: "role" }, role),
+    el("p", {}, bio),
+    temple ? el("a", { class: "pill", href: `#/t/${id}` }, `Visit ${temple.name}`) : null,
+  );
+}
+
 function homePage() {
   setCrumbs([]);
-  document.title = "Pixelus Solutions";
+  document.title = "Pixelus Deluxe Solutions";
   const all = totals(store.data.puzzles.map((p) => p.id));
   const hero = el("section", { class: "hero" },
-    el("h1", {}, "The Temples of Pixelus"),
-    el("p", {}, "Every puzzle solved in the fewest moves we could find. Play each board yourself with the real sliding rules, then watch the solution move by move."),
+    el("div", { class: "hero-title" },
+      sprite("claudius", 88),
+      el("div", {},
+        el("span", { class: "kicker" }, "Solutions & world records for"),
+        el("h1", {}, "Pixelus Deluxe"),
+      ),
+    ),
+    el("p", {}, "Every temple puzzle solved in the fewest moves we could find. Play each board yourself with the real sliding rules, then watch the solution move by move."),
     el("div", { class: "stat-row" },
       el("div", { class: "stat" }, el("b", {}, String(all.count)), el("span", {}, "puzzles solved")),
       el("div", { class: "stat" }, el("b", {}, String(all.perfect)), el("span", {}, "at or under the record")),
@@ -116,12 +179,36 @@ function homePage() {
       el("li", {}, el("b", {}, "New world record: "), "the solution beat the record that was in the game, so the game's world record is now this one."),
     ),
   );
-  app.replaceChildren(hero, grid, about);
+  const story = el("section", { class: "panel story" },
+    el("div", { class: "story-text" },
+      el("h2", {}, "About the game"),
+      el("p", {}, "Pixelus Deluxe is a tile-sliding puzzle game from Nuclide Games, published by PopCap Games in 2005. You play Claudius, a Roman sailor shipwrecked on the island of Pixelus, whose temples have lost the tiles of their mosaic floors."),
+      el("p", {}, "Each temple belongs to a god of the old myths, and each puzzle is a picture with gaps in it. Claudius flings tiles in from the edge of the floor. A tile only stops when it bumps into another one, so the art is in building stoppers, then pulling them back out before you run out of tiles."),
+      el("p", {}, "Expert mode takes away the undo button and shows a world record for every puzzle. Those records are what this site is chasing."),
+    ),
+    el("dl", { class: "facts" }, FACTS.map(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]).flat()),
+  );
+  const rules = el("section", { class: "rules" },
+    el("h2", {}, "Rules of the floor"),
+    el("div", { class: "rule-row" },
+      [["Slide in", "Click an empty cell. A tile flies in from the far edge and only stops there if something solid is right behind that cell."],
+       ["Pull out", "Click one of your tiles. It leaves along any clear line to the edge."],
+       ["Count everything", "Every tile slid in or pulled out is one move. A helper you place and later remove costs two."],
+       ["Watch the tray", "You only get as many tiles as the picture needs, so helpers have to be recycled."]]
+        .map(([h, t], i) => el("div", { class: "rule panel" }, el("b", { class: "rule-num" }, String(i + 1)), el("h3", {}, h), el("p", {}, t))),
+    ),
+  );
+  const cast = el("section", { class: "cast" },
+    el("h2", {}, "Meet the cast"),
+    el("p", { class: "cast-hint" }, "Click a character to say hello."),
+    el("div", { class: "cast-grid" }, CAST.map(castCard)),
+  );
+  app.replaceChildren(hero, story, grid, rules, cast, about);
 }
 
 function templePage(t) {
   setCrumbs([["All temples", "#/"], [t.name, `#/t/${t.id}`]]);
-  document.title = `${t.name} · Pixelus Solutions`;
+  document.title = `${t.name} · Pixelus Deluxe Solutions`;
   const s = totals(t.puzzles);
   const head = el("div", { class: "temple-head" },
     sprite(t.id, 96),
@@ -147,7 +234,7 @@ function templePage(t) {
 function puzzlePage(p) {
   const t = store.temples[p.temple];
   setCrumbs([["All temples", "#/"], [t.name, `#/t/${t.id}`], [`Puzzle ${p.index}`, `#/p/${p.id}`]]);
-  document.title = `${t.name} ${p.index} · Pixelus Solutions`;
+  document.title = `${t.name} ${p.index} · Pixelus Deluxe Solutions`;
 
   const side = el("nav", { class: "side-list panel" },
     t.puzzles.map((id) => {

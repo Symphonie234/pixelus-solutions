@@ -6,6 +6,33 @@ const PALETTE = {
 };
 
 const CHARS = {
+  claudius: {
+    name: "Claudius",
+    mode: "flip",
+    base: [
+      "................",
+      ".....kkkkkk.....",
+      "....knNnNnNk....",
+      "...knNnNnNnNk...",
+      "...knssssssnk...",
+      "...kssksskssk...",
+      "...kssssssssk...",
+      "....kssrrssk....",
+      ".....kssssk.....",
+      "...kwwwwwwwwk...",
+      "..skwwwwwwwwks..",
+      "..skyyyyyyyyks..",
+      "...kwwwwwwwwk...",
+      "....kwwkkwwk....",
+      "....kssk.kssk...",
+      "....nnnn.nnnn...",
+    ],
+    alt: {
+      9: "...kwwwwwwwwk.s.",
+      10: "..skwwwwwwwwk.s.",
+      11: "..skyyyyyyyyk...",
+    },
+  },
   cave: {
     name: "the Cyclops",
     mode: "blink",
