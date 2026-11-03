@@ -508,6 +508,7 @@ class Player {
         el("span", {}, el("i", { style: "background:var(--fixed)" }), "fixed tile"),
         el("span", {}, el("i", { style: "background:var(--tile)" }), "your tile"),
         el("span", {}, el("i", { style: "background:var(--temp)" }), "helper"),
+        p.board.some((l) => /[gGx]/.test(l)) ? el("span", {}, el("i", { style: "background:#2d86c9;border-radius:50%" }), "glue: a tile set here can't be removed") : null,
       ),
     );
     this.update();
