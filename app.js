@@ -33,6 +33,55 @@ function el(tag, attrs = {}, ...kids) {
   return n;
 }
 
+const PICS = {};
+
+function picURL(p, small = false) {
+  if (!p.picture) return p.thumb;
+  const key = p.id + (small ? "s" : "");
+  if (PICS[key]) return PICS[key];
+  const n = p.board.length, k = small ? 1 : 6;
+  if (small) {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = n;
+    const g = cv.getContext("2d");
+    for (let i = 0; i < n * n; i++) {
+      g.fillStyle = `#${p.picture.slice(i * 6, i * 6 + 6)}`;
+      g.fillRect(i % n, Math.floor(i / n), 1, 1);
+    }
+    return (PICS[key] = cv.toDataURL());
+  }
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = n * k + 1;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#3a2812";
+  g.fillRect(0, 0, cv.width, cv.height);
+  for (let i = 0; i < n * n; i++) {
+    const r = Math.floor(i / n), c = i % n;
+    g.fillStyle = `#${p.picture.slice(i * 6, i * 6 + 6)}`;
+    g.fillRect(c * k + 1, r * k + 1, k - 1, k - 1);
+    g.fillStyle = "rgba(255,255,255,0.22)";
+    g.fillRect(c * k + 1, r * k + 1, k - 1, 1);
+    g.fillStyle = "rgba(0,0,0,0.18)";
+    g.fillRect(c * k + 1, r * k + k - 1, k - 1, 1);
+  }
+  return (PICS[key] = cv.toDataURL());
+}
+
+const TEMPLE_LOOK = {
+  cave: ["#4f6b52", "Back in my cave, little sailor? Mind your head on the way in."],
+  flora: ["#3f8f4a", "Claudius! My garden floor is missing petals again."],
+  cupid: ["#b8304f", "Claudius, back for another round of heartache?"],
+  neptune: ["#2c6aa8", "The tide washes Claudius into my halls once more."],
+  venus: ["#d0679e", "Claudius returns. Do try to keep it beautiful this time."],
+  bacchus: ["#6e3a99", "Claudius! Pull up a goblet, the floor can wait a minute."],
+  vulcan: ["#b02a76", "Back at my forge, Claudius? Mind the glue, it never lets go."],
+};
+
+function templeTitle(name) {
+  const m = name.match(/^(.*\b(?:of|the))\s+(\S+)$/i);
+  return m ? [m[1], m[2]] : ["", name];
+}
+
 function medal(p) {
   if (p.record == null) return null;
   const diff = p.moves - p.record;
@@ -155,7 +204,7 @@ function homePage() {
   const grid = el("section", { class: "temple-grid" },
     store.data.temples.map((t) => {
       const s = totals(t.puzzles);
-      const thumbs = t.puzzles.slice(0, 8).map((id) => el("img", { src: store.byId[id].thumb, alt: "", loading: "lazy" }));
+      const thumbs = t.puzzles.slice(0, 8).map((id) => el("img", { src: picURL(store.byId[id], true), alt: "", loading: "lazy" }));
       return el("a", { class: "temple-card panel", href: `#/t/${t.id}` },
         sprite(t.id, 56),
         el("h2", {}, t.name),
@@ -210,25 +259,44 @@ function templePage(t) {
   setCrumbs([["All temples", "#/"], [t.name, `#/t/${t.id}`]]);
   document.title = `${t.name} · Pixelus Deluxe Solutions`;
   const s = totals(t.puzzles);
-  const head = el("div", { class: "temple-head" },
-    sprite(t.id, 96),
-    el("h1", {}, t.name),
-    el("p", {}, `${s.count} puzzles · ${s.moves} moves in total · ${s.perfect}/${s.count} perfect`),
+  const [accent, quote] = TEMPLE_LOOK[t.id] || ["#8a5a0c", "Welcome, Claudius."];
+  const [small, big] = templeTitle(t.name);
+  const left = s.count - s.perfect;
+  const god = el("div", { class: "temple-god" },
+    el("div", { class: "god-bubble" }, quote),
+    sprite(t.id, 150),
   );
   const grid = el("div", { class: "puzzle-grid" },
     t.puzzles.map((id) => {
       const p = store.byId[id];
-      return el("a", { class: "puzzle-card", href: `#/p/${p.id}` },
-        medal(p),
-        el("img", { src: p.thumb, alt: `${t.name} puzzle ${p.index}`, loading: "lazy" }),
-        el("span", { class: "num" }, `Puzzle ${p.index}`),
-        el("span", { class: "line" }, p.record != null ? `${p.moves} moves · record ${p.record}` : `${p.moves} moves`),
-        p.optimal ? el("span", { class: "pill proven" }, "proven optimal") : null,
-        p.originalRecord ? el("span", { class: "pill beats" }, "New world record") : null,
+      return el("a", { class: "puzzle-card", href: `#/p/${p.id}`, title: `Puzzle ${p.index}` },
+        el("span", { class: "pic" },
+          el("img", { src: picURL(p), alt: `${t.name} puzzle ${p.index}`, loading: "lazy" }),
+          medal(p),
+          p.originalRecord ? el("span", { class: "wr-flag" }, "New WR") : null,
+        ),
+        el("span", { class: "plate" },
+          el("b", {}, `Puzzle ${p.index}`),
+          el("small", {}, p.record != null ? `${p.moves} moves · record ${p.record}` : `${p.moves} moves`),
+        ),
       );
     }),
   );
-  app.replaceChildren(head, grid);
+  const building = el("div", { class: "temple-build" },
+    el("div", { class: "pediment" },
+      small ? el("span", { class: "pre" }, small) : null,
+      el("h1", {}, big),
+    ),
+    el("div", { class: "plaque" }, left ? `${left} puzzle${left > 1 ? "s" : ""} still above the record` : "Every puzzle at the record!"),
+    el("div", { class: "temple-body" },
+      el("span", { class: "pillar" }),
+      el("div", { class: "temple-frame" }, grid),
+      el("span", { class: "pillar" }),
+    ),
+    el("div", { class: "temple-steps" }, `${s.count} puzzles · ${s.moves} moves in total · ${s.proven} proven optimal`),
+  );
+  const scene = el("section", { class: "temple-scene", style: `--accent:${accent}` }, god, building);
+  app.replaceChildren(scene);
 }
 
 function puzzlePage(p) {
@@ -237,13 +305,15 @@ function puzzlePage(p) {
   document.title = `${t.name} ${p.index} · Pixelus Deluxe Solutions`;
 
   const side = el("nav", { class: "side-list panel" },
-    t.puzzles.map((id) => {
-      const q = store.byId[id];
-      return el("a", { href: `#/p/${q.id}`, class: q.id === p.id ? "active" : "" },
-        el("img", { src: q.thumb, alt: "" }),
-        el("span", {}, el("b", {}, `Puzzle ${q.index}`), el("small", {}, `${q.moves} moves`)),
-      );
-    }),
+    el("div", { class: "side-scroll" },
+      t.puzzles.map((id) => {
+        const q = store.byId[id];
+        return el("a", { href: `#/p/${q.id}`, class: q.id === p.id ? "active" : "" },
+          el("img", { src: picURL(q, true), alt: "" }),
+          el("span", {}, el("b", {}, `Puzzle ${q.index}`), el("small", {}, `${q.moves} moves`)),
+        );
+      }),
+    ),
   );
 
   const boardEl = el("div", { class: "board" });
@@ -502,6 +572,8 @@ class Board {
   reveal(hex) {
     if (!hex || this.picture) return;
     const [cr, cc] = [(this.rows - 1) / 2, (this.cols - 1) / 2];
+    this.last = -1;
+    this.paint();
     this.picture = el("div", { class: "picture" });
     for (let i = 0; i < this.rows * this.cols; i++) {
       const [r, c] = this.rc(i);
