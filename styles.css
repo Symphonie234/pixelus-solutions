@@ -1272,3 +1272,21 @@ kbd {
 .sound-btn:hover { background: rgba(255, 226, 122, 0.25); }
 .sound-btn[aria-pressed="false"] { color: #b9a47a; }
 .masthead .crumbs { margin-left: auto; }
+
+@media (hover: none) { .keys { display: none; } }
+
+@media (max-width: 600px) {
+  .masthead { flex-wrap: wrap; gap: 8px 10px; padding: 10px 14px; }
+  .brand { flex: 1; min-width: 0; }
+  .brand-text { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .masthead .crumbs { order: 3; flex-basis: 100%; margin-left: 0; }
+  .sound-btn { order: 2; margin-left: 0; }
+  .app { padding-left: 12px; padding-right: 12px; }
+  :root { --cell: calc((100vw - 24px - 36px - 6px) / 16); }
+  .board-wrap { padding: 18px; }
+  .claudius { width: 30px; height: 30px; margin: -21px 0 0 -15px; }
+  .claudius .sprite { --size: 30px !important; width: 30px; height: 30px; }
+}
+
+.surprise { margin-top: 14px; }
+@media (max-width: 600px) { .brand-text em { display: none; } }

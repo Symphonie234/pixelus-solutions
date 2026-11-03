@@ -217,6 +217,10 @@ function homePage() {
       ),
     ),
     el("p", {}, "Every temple puzzle solved in the fewest moves we could find. Play each board yourself with the real sliding rules, then watch the solution move by move."),
+    el("button", { class: "btn primary surprise", onclick: () => {
+      const ps = store.data.puzzles;
+      location.hash = `#/p/${ps[Math.floor(Math.random() * ps.length)].id}`;
+    } }, "Surprise me: random puzzle"),
     el("div", { class: "stat-row" },
       el("div", { class: "stat" }, el("b", {}, String(all.count)), el("span", {}, "puzzles solved")),
       el("div", { class: "stat" }, el("b", {}, String(all.perfect)), el("span", {}, "at or under the record")),
