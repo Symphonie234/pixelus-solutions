@@ -255,6 +255,30 @@ function puzzlePage(p) {
   if (active) active.scrollIntoView({ block: "nearest" });
 }
 
+const GLYPHS = [
+  "M6 18V6h12v10H10v-6h4v2",
+  "M16.5 6.5c-2.5-2-8-1.5-8 2.5s7.5 2.5 7.5 6.5-5 4.5-8 2.5",
+  "M12 4l8 8-8 8-8-8zM12 9l3 3-3 3-3-3z",
+  "M6.5 6.5l11 11M17.5 6.5l-11 11M12 9.5v5M9.5 12h5",
+  "M12 19v-8M12 11c-1.5-2.5-1-5.5 0-6.5 1 1 1.5 4 0 6.5M12 13c-2-1-5-.5-6 1.5 2 1 4.5.5 6-1.5M12 13c2-1 5-.5 6 1.5-2 1-4.5.5-6-1.5",
+  "M12 6a3 3 0 1 1 0 .01M12 12a3 3 0 1 1-.01 0M6 12a3 3 0 1 1 0 .01M18 12a3 3 0 1 1 0 .01M12 18a3 3 0 1 1 0 .01",
+  "M5 9.5c2.3-2.3 4.7 2.3 7 0s4.7-2.3 7 0M5 14.5c2.3-2.3 4.7 2.3 7 0s4.7-2.3 7 0",
+  "M12 12h3v-4H8v8h10V5H5v14h14",
+  "M6 6h12v12H6zM6 12h12M12 6v12",
+  "M12 5l2 5h5l-4 3 1.5 5L12 15l-4.5 3L9 13 5 10h5z",
+];
+
+function glyph(i) {
+  const n = ((i * 2654435761) >>> 0) % GLYPHS.length;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("class", "glyph");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", GLYPHS[n]);
+  svg.append(path);
+  return svg;
+}
+
 class Board {
   constructor(p, root, onMove) {
     this.rows = p.board.length;
@@ -395,7 +419,7 @@ class Board {
     const out = [(r - l.dr * dist) * size, (c - l.dc * dist) * size];
     const at = [r * size, c * size];
     const [from, to] = op === "p" ? [out, at] : [at, out];
-    const f = el("div", { class: `flyer${this.goal.has(i) ? "" : " temp"}` });
+    const f = el("div", { class: `flyer${this.goal.has(i) ? "" : " temp"}${this.glue.has(i) && op === "p" ? " glued" : ""}` }, glyph(i));
     f.style.left = "1px";
     f.style.top = "1px";
     f.style.transform = `translate(${from[1]}px, ${from[0]}px)`;
@@ -421,10 +445,10 @@ class Board {
     this.cells.forEach((cell, i) => {
       cell.className = "cell" + (this.goal.has(i) ? " target" : "") + (this.glue.has(i) ? " glue" : "");
       cell.replaceChildren();
-      if (this.solid.has(i)) cell.append(el("div", { class: "tile fixed" }));
+      if (this.solid.has(i)) cell.append(el("div", { class: "tile fixed" }, glyph(i)));
       else if (this.mine.has(i)) {
         const cls = "tile" + (this.goal.has(i) ? "" : " temp") + (this.glue.has(i) ? " glued" : "") + (i === this.last ? " last" : "");
-        cell.append(el("div", { class: cls }));
+        cell.append(el("div", { class: cls }, glyph(i)));
       }
     });
   }
