@@ -499,6 +499,26 @@ class Board {
     });
   }
 
+  reveal(hex) {
+    if (!hex || this.picture) return;
+    const [cr, cc] = [(this.rows - 1) / 2, (this.cols - 1) / 2];
+    this.picture = el("div", { class: "picture" });
+    for (let i = 0; i < this.rows * this.cols; i++) {
+      const [r, c] = this.rc(i);
+      const d = Math.hypot(r - cr, c - cc);
+      const px = el("i", { style: `background:#${hex.slice(i * 6, i * 6 + 6)};animation-delay:${Math.round(d * 45)}ms` });
+      this.picture.append(px);
+    }
+    this.root.append(this.picture);
+    this.thrower.act("catch");
+  }
+
+  hidePicture() {
+    if (!this.picture) return;
+    this.picture.remove();
+    this.picture = null;
+  }
+
   solved() {
     if (this.mine.size !== this.goal.size) return false;
     for (const g of this.goal) if (!this.mine.has(g)) return false;
@@ -506,6 +526,7 @@ class Board {
   }
 
   reset() {
+    this.hidePicture();
     this.mine = new Set(this.start);
     this.history = [];
     this.last = -1;
@@ -595,13 +616,17 @@ class Player {
     const now = this.moveList.querySelector(".now");
     if (now) now.scrollIntoView({ block: "nearest" });
     if (b.solved()) {
+      setTimeout(() => b.solved() && b.reveal(this.p.picture), 350);
       const n = b.history.length;
       const rec = this.p.record;
       let msg = `Solved in <b>${n}</b> moves`;
       if (this.mode === "play" && rec != null) msg += n < rec ? " — that beats the world record!" : n === rec ? " — a perfect, record-tying solve!" : ` — the record is ${rec}.`;
       this.banner.innerHTML = msg;
       this.banner.hidden = false;
-    } else this.banner.hidden = true;
+    } else {
+      this.banner.hidden = true;
+      b.hidePicture();
+    }
     this.playBtn.textContent = this.playing ? "Pause" : this.step >= this.plan.length && this.mode === "solution" ? "Replay solution" : "Play solution";
     this.prevBtn.disabled = this.mode !== "solution" || this.step === 0;
     this.nextBtn.disabled = this.step >= this.plan.length && this.mode === "solution";
