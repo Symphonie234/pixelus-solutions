@@ -430,15 +430,20 @@ const GLYPHS = [
   "M7 5h10l-5 7 5 7H7l5-7z",
 ];
 
+const GLYPH_SVG = [];
+
 function glyph(i) {
   const n = ((i * 2654435761) >>> 0) % GLYPHS.length;
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("class", "glyph");
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", GLYPHS[n]);
-  svg.append(path);
-  return svg;
+  if (!GLYPH_SVG[n]) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("class", "glyph");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", GLYPHS[n]);
+    svg.append(path);
+    GLYPH_SVG[n] = svg;
+  }
+  return GLYPH_SVG[n].cloneNode(true);
 }
 
 class Thrower {
@@ -513,16 +518,60 @@ class Board {
     this.root.style.setProperty("--rows", this.rows);
     this.root.style.setProperty("--cols", this.cols);
     this.cells = [];
+    this.sig = [];
     this.root.replaceChildren();
+    const frag = document.createDocumentFragment();
     for (let i = 0; i < this.rows * this.cols; i++) {
       const cell = el("div", { class: "cell" });
-      cell.addEventListener("click", () => this.click(i));
-      cell.addEventListener("mouseenter", () => this.hover(i, true));
-      cell.addEventListener("mouseleave", () => this.hover(i, false));
+      cell.dataset.i = i;
       this.cells.push(cell);
-      this.root.append(cell);
+      frag.append(cell);
     }
+    this.root.append(frag);
+    const at = (e) => {
+      const c = e.target.closest && e.target.closest(".cell");
+      return c && c.parentElement === this.root ? Number(c.dataset.i) : -1;
+    };
+    this.root.addEventListener("click", (e) => {
+      const i = at(e);
+      if (i >= 0) this.click(i);
+    });
+    this.root.addEventListener("mouseover", (e) => {
+      const i = at(e);
+      if (i !== this.hovered) {
+        if (this.hovered >= 0) this.hover(this.hovered, false);
+        this.hovered = i;
+        if (i >= 0) this.hover(i, true);
+      }
+    });
+    this.root.addEventListener("mouseleave", () => {
+      if (this.hovered >= 0) this.hover(this.hovered, false);
+      this.hovered = -1;
+    });
+    this.hovered = -1;
+    this.arrow = el("div", { class: "lane-arrow", hidden: true });
+    this.root.parentElement.append(this.arrow);
     this.paint();
+  }
+
+  showLane(i, l, op) {
+    this.hideLane();
+    if (!l) return;
+    const [r, c] = this.rc(i);
+    const dist = l.path.length + 1;
+    const [x, y] = this.thrower.spot(r - l.dr * dist, c - l.dc * dist);
+    const deg = Math.atan2(op === "p" ? l.dr : -l.dr, op === "p" ? l.dc : -l.dc) * 180 / Math.PI;
+    this.arrow.style.transform = `translate(${x}px, ${y}px) rotate(${deg}deg)`;
+    this.arrow.classList.toggle("out", op === "r");
+    this.arrow.hidden = false;
+    this.laneCells = l.path;
+    for (const j of l.path) this.cells[j].classList.add("lane");
+  }
+
+  hideLane() {
+    this.arrow.hidden = true;
+    if (this.laneCells) for (const j of this.laneCells) this.cells[j].classList.remove("lane");
+    this.laneCells = null;
   }
 
   rc(i) { return [Math.floor(i / this.cols), i % this.cols]; }
@@ -568,9 +617,12 @@ class Board {
   hover(i, on) {
     const cell = this.cells[i];
     cell.classList.remove("hover-ok", "hover-bad");
+    if (!this.busy) this.hideLane();
     if (!on || this.locked || this.solid.has(i)) return;
-    const ok = this.mine.has(i) ? this.removeLane(i) : this.placeLane(i);
+    const op = this.mine.has(i) ? "r" : "p";
+    const ok = op === "r" ? this.removeLane(i) : this.placeLane(i);
     cell.classList.add(ok ? "hover-ok" : "hover-bad");
+    if (ok && !this.busy) this.showLane(i, ok, op);
   }
 
   click(i) {
@@ -609,6 +661,12 @@ class Board {
     const [r, c] = this.rc(i);
     const dist = l.path.length + 1;
     const wait = this.thrower.walk(r - l.dr * dist, c - l.dc * dist, l.dr, l.dc) / this.speed;
+    this.showLane(i, l, op);
+    const finish = done;
+    done = () => {
+      this.hideLane();
+      finish();
+    };
     setTimeout(() => {
       if (op === "p") {
         this.thrower.act("throw");
@@ -660,13 +718,14 @@ class Board {
 
   paint() {
     this.cells.forEach((cell, i) => {
+      const tile = this.solid.has(i) ? "tile fixed" : this.mine.has(i)
+        ? "tile" + (this.goal.has(i) ? "" : " temp") + (this.glue.has(i) ? " glued" : "") + (i === this.last ? " last" : "")
+        : "";
+      if (this.sig[i] === tile) return;
+      this.sig[i] = tile;
       cell.className = "cell" + (this.goal.has(i) ? " target" : "") + (this.glue.has(i) ? " glue" : "");
       cell.replaceChildren();
-      if (this.solid.has(i)) cell.append(el("div", { class: "tile fixed" }, glyph(i)));
-      else if (this.mine.has(i)) {
-        const cls = "tile" + (this.goal.has(i) ? "" : " temp") + (this.glue.has(i) ? " glued" : "") + (i === this.last ? " last" : "");
-        cell.append(el("div", { class: cls }, glyph(i)));
-      }
+      if (tile) cell.append(el("div", { class: tile }, glyph(i)));
     });
   }
 

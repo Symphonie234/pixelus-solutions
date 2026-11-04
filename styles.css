@@ -1316,3 +1316,35 @@ kbd {
 .diff.medium { background: #c9861a; }
 .diff.hard { background: #c4502c; }
 .diff.expert { background: #7b2a8f; }
+
+.cell.lane { background-image: linear-gradient(rgba(255, 240, 170, 0.45), rgba(255, 240, 170, 0.45)); }
+
+.lane-arrow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 26px;
+  height: 22px;
+  margin: -11px 0 0 -13px;
+  z-index: 7;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 0 rgba(90, 50, 0, 0.6));
+}
+
+.lane-arrow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #fff3a8, #f0a91a);
+  clip-path: polygon(0 30%, 55% 30%, 55% 0, 100% 50%, 55% 100%, 55% 70%, 0 70%);
+  animation: nudge 0.7s ease-in-out infinite;
+}
+
+.lane-arrow.out::before { background: linear-gradient(180deg, #ffd0c4, #e2575a); }
+.lane-arrow[hidden] { display: none; }
+
+@keyframes nudge {
+  50% { transform: translateX(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) { .lane-arrow::before { animation: none; } }
