@@ -379,7 +379,7 @@ function templePage(t) {
 
 function puzzlePage(p) {
   const t = store.temples[p.temple];
-  setCrumbs([["All temples", "#/"], [t.name, `#/t/${t.id}`], [`Puzzle ${p.index}`, `#/p/${p.id}`]]);
+  setCrumbs([["All temples", "#/"], [t.name, `#/t/${t.id}`], [p.custom ? p.title : `Puzzle ${p.index}`, `#/p/${p.id}`]]);
   document.title = `${t.name} ${p.index} · Pixelus Deluxe Solutions`;
 
   const side = el("nav", { class: "side-list panel" },
