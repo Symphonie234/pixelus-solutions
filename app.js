@@ -5,7 +5,7 @@ const crumbs = document.getElementById("crumbs");
 const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 const store = { data: null, byId: {}, temples: {}, player: null };
 
-fetch("data/puzzles.json")
+fetch("data/puzzles.json", { cache: "no-cache" })
   .then((r) => r.json())
   .then((data) => {
     store.data = data;
