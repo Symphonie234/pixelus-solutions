@@ -1317,34 +1317,49 @@ kbd {
 .diff.hard { background: #c4502c; }
 .diff.expert { background: #7b2a8f; }
 
-.cell.lane { background-image: linear-gradient(rgba(255, 240, 170, 0.45), rgba(255, 240, 170, 0.45)); }
-
 .lane-arrow {
+  --c: 190, 245, 255;
+  --edge: 20, 120, 150;
   position: absolute;
   left: 0;
   top: 0;
-  width: 26px;
-  height: 22px;
-  margin: -11px 0 0 -13px;
+  height: 20px;
+  margin-top: -10px;
   z-index: 7;
   pointer-events: none;
-  filter: drop-shadow(0 2px 0 rgba(90, 50, 0, 0.6));
+  transform-origin: 0 50%;
+  opacity: 0.72;
+  filter: drop-shadow(0 0 1px rgba(var(--edge), 0.9)) drop-shadow(0 0 4px rgba(var(--c), 0.6));
+  animation: shimmer 1.1s ease-in-out infinite;
 }
 
 .lane-arrow::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, #fff3a8, #f0a91a);
-  clip-path: polygon(0 30%, 55% 30%, 55% 0, 100% 50%, 55% 100%, 55% 70%, 0 70%);
-  animation: nudge 0.7s ease-in-out infinite;
+  left: 0;
+  right: 13px;
+  top: 6px;
+  height: 8px;
+  border-radius: 4px 0 0 4px;
+  background: linear-gradient(90deg, rgba(var(--c), 0.15), rgba(var(--c), 0.95));
 }
 
-.lane-arrow.out::before { background: linear-gradient(180deg, #ffd0c4, #e2575a); }
+.lane-arrow::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 16px;
+  height: 20px;
+  background: rgb(var(--c));
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.lane-arrow.out { --c: 255, 170, 150; --edge: 150, 40, 30; }
 .lane-arrow[hidden] { display: none; }
 
-@keyframes nudge {
-  50% { transform: translateX(4px); }
+@keyframes shimmer {
+  50% { opacity: 0.5; }
 }
 
-@media (prefers-reduced-motion: reduce) { .lane-arrow::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .lane-arrow { animation: none; } }

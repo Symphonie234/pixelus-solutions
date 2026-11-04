@@ -559,19 +559,19 @@ class Board {
     if (!l) return;
     const [r, c] = this.rc(i);
     const dist = l.path.length + 1;
-    const [x, y] = this.thrower.spot(r - l.dr * dist, c - l.dc * dist);
+    const edge = this.thrower.spot(r - l.dr * dist, c - l.dc * dist);
+    const cell = this.thrower.spot(r, c);
+    const [x, y] = op === "p" ? edge : cell;
+    const len = Math.hypot(cell[0] - edge[0], cell[1] - edge[1]);
     const deg = Math.atan2(op === "p" ? l.dr : -l.dr, op === "p" ? l.dc : -l.dc) * 180 / Math.PI;
+    this.arrow.style.width = `${len}px`;
     this.arrow.style.transform = `translate(${x}px, ${y}px) rotate(${deg}deg)`;
     this.arrow.classList.toggle("out", op === "r");
     this.arrow.hidden = false;
-    this.laneCells = l.path;
-    for (const j of l.path) this.cells[j].classList.add("lane");
   }
 
   hideLane() {
     this.arrow.hidden = true;
-    if (this.laneCells) for (const j of this.laneCells) this.cells[j].classList.remove("lane");
-    this.laneCells = null;
   }
 
   rc(i) { return [Math.floor(i / this.cols), i % this.cols]; }
