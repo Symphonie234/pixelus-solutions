@@ -99,6 +99,7 @@ const TEMPLE_LOOK = {
   venus: ["#d0679e", "Claudius returns. Do try to keep it beautiful this time."],
   bacchus: ["#6e3a99", "Claudius! Pull up a goblet, the floor can wait a minute."],
   vulcan: ["#b02a76", "Back at my forge, Claudius? Mind the glue, it never lets go."],
+  diana: ["#2f4f8a", "Quiet, Claudius. The moon is up and my floors are long tonight."],
   workshop: ["#7a5a2a", "My own floor designs! Think you can match my par?"],
 };
 
@@ -197,6 +198,9 @@ const CAST = [
   ["bacchus", "Bacchus", "God of wine and revelry",
     "Grapes, goblets and feasts. Some of his tiles come already placed, and the shortest route often lifts them out first.",
     "A tile already in place? Pour it out and start the party over."],
+  ["diana", "Diana", "Goddess of the hunt and the moon",
+    "Twin sister of Apollo, with a silver bow and a crescent moon in her hair. Her temple has the longest boards yet.",
+    "Every tile is an arrow. Waste none."],
   ["vulcan", "Vulcan", "God of fire and the forge",
     "The blacksmith of the gods, hammering away beneath a volcano. His floors are spotted with glue, and a tile set on glue stays forever.",
     "Measure twice, glue once."],
